@@ -1,0 +1,9 @@
+{
+  "name": "trendbaseai",
+  "version": "1.0.0",
+  "description": "TrendBaseAI - Google Trends × AI Business Plan Generator",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.0",
+    "axios": "^1.7.0"
+  }
+}
