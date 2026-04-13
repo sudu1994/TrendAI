@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrendBaseAI — トレンドを、ビジネスへ。</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root {
+    --bg: #08090d;
+    --surface: #10121a;
+    --surface2: #181c28;
+    --border: rgba(255,255,255,0.07);
+    --accent: #00e5a0;
+    --accent2: #0098ff;
+    --accent3: #ff6b35;
+    --text: #f0f2f8;
+    --muted: #6b7280;
+    --font-display: 'Syne', sans-serif;
+    --font-body: 'Noto Sans JP', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* GRID BG */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 40px;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    background: rgba(8,9,13,0.8);
+    position: sticky; top: 0;
+  }
+  .logo {
+    font-family: var(--font-display);
+    font-size: 22px; font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--accent); }
+  .badge {
+    font-size: 10px; font-weight: 600;
+    background: rgba(0,229,160,0.12);
+    color: var(--accent);
+    border: 1px solid rgba(0,229,160,0.25);
+    padding: 3px 10px; border-radius: 20px;
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative; z-index: 1;
+    text-align: center;
+    padding: 80px 20px 60px;
+  }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--accent); font-weight: 600;
+    background: rgba(0,229,160,0.08);
+    border: 1px solid rgba(0,229,160,0.2);
+    padding: 6px 16px; border-radius: 20px;
+    margin-bottom: 28px;
+  }
+  .hero h1 {
+    font-family: var(--font-display);
+    font-size: clamp(36px, 6vw, 72px);
+    font-weight: 800; line-height: 1.05;
+    letter-spacing: -2px;
+    margin-bottom: 20px;
+  }
+  .hero h1 .hl { color: var(--accent); }
+  .hero p {
+    font-size: 16px; color: var(--muted);
+    max-width: 500px; margin: 0 auto 50px;
+    line-height: 1.8;
+  }
+
+  /* ── SEARCH BOX ── */
+  .search-wrap {
+    max-width: 640px; margin: 0 auto;
+    display: flex; gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 8px 8px 8px 20px;
+    transition: border-color 0.2s;
+  }
+  .search-wrap:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,229,160,0.1);
+  }
+  .search-wrap input {
+    flex: 1; background: none; border: none; outline: none;
+    color: var(--text); font-size: 16px;
+    font-family: var(--font-body);
+  }
+  .search-wrap input::placeholder { color: var(--muted); }
+  .btn-analyze {
+    background: var(--accent); color: #000;
+    border: none; border-radius: 10px;
+    padding: 12px 28px; font-size: 14px; font-weight: 700;
+    cursor: pointer; white-space: nowrap;
+    font-family: var(--font-display);
+    letter-spacing: 0.5px;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn-analyze:hover { transform: scale(1.03); box-shadow: 0 0 20px rgba(0,229,160,0.35); }
+  .btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* EXAMPLES */
+  .examples {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: 8px; margin-top: 20px;
+  }
+  .examples button {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted); font-size: 13px;
+    padding: 5px 14px; border-radius: 20px;
+    cursor: pointer; transition: all 0.15s;
+    font-family: var(--font-body);
+  }
+  .examples button:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── PROGRESS ── */
+  #progress {
+    display: none;
+    max-width: 640px; margin: 40px auto 0;
+  }
+  .step-list { list-style: none; }
+  .step-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 0; font-size: 14px;
+    border-bottom: 1px solid var(--border);
+    transition: all 0.3s;
+    opacity: 0.35;
+  }
+  .step-item.active { opacity: 1; color: var(--accent); }
+  .step-item.done { opacity: 0.7; }
+  .step-icon { font-size: 18px; width: 28px; text-align: center; }
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(0,229,160,0.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── RESULTS ── */
+  #results {
+    display: none;
+    max-width: 1100px; margin: 60px auto;
+    padding: 0 20px;
+  }
+
+  /* Trend Card */
+  .trend-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    margin-bottom: 24px;
+    position: relative; overflow: hidden;
+  }
+  .trend-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .trend-header {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; flex-wrap: wrap; gap: 16px;
+    margin-bottom: 24px;
+  }
+  .trend-keyword {
+    font-family: var(--font-display);
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -1px;
+  }
+  .trend-badge {
+    font-size: 15px; font-weight: 600;
+    background: rgba(0,229,160,0.1);
+    border: 1px solid rgba(0,229,160,0.25);
+    color: var(--accent); padding: 6px 16px; border-radius: 12px;
+  }
+  .trend-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 16px; margin-bottom: 28px;
+  }
+  .stat-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px;
+    text-align: center;
+  }
+  .stat-val { font-family: var(--font-display); font-size: 28px; font-weight: 800; color: var(--accent); }
+  .stat-lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+  .chart-wrap { height: 180px; margin-top: 8px; }
+
+  /* Tags */
+  .tag-group { margin-top: 20px; }
+  .tag-group-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 8px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tag {
+    font-size: 12px; font-weight: 500;
+    padding: 4px 12px; border-radius: 8px;
+  }
+  .tag.rising { background: rgba(255,107,53,0.12); color: #ff9a72; border: 1px solid rgba(255,107,53,0.2); }
+  .tag.top    { background: rgba(0,152,255,0.1);   color: #4db8ff; border: 1px solid rgba(0,152,255,0.2); }
+
+  /* Plan + Site grid */
+  .output-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 768px) { .output-grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+  .card-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .card-icon { font-size: 20px; }
+  .card-title { font-family: var(--font-display); font-weight: 700; font-size: 15px; }
+  .card-body { padding: 24px; }
+
+  /* Business Plan */
+  .plan-title { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: var(--accent); margin-bottom: 4px; }
+  .plan-tagline { font-size: 13px; color: var(--muted); margin-bottom: 20px; font-style: italic; }
+  .plan-section { margin-bottom: 18px; }
+  .plan-section-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.5px; color: var(--accent2); margin-bottom: 6px;
+  }
+  .plan-section p, .plan-section li {
+    font-size: 13px; line-height: 1.7; color: rgba(240,242,248,0.8);
+  }
+  .plan-section ul { padding-left: 16px; }
+  .seo-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seo-tag {
+    font-size: 11px; padding: 3px 10px; border-radius: 6px;
+    background: rgba(0,229,160,0.08); color: var(--accent);
+    border: 1px solid rgba(0,229,160,0.15);
+  }
+
+  /* Site Preview */
+  .site-preview-wrap {
+    position: relative;
+  }
+  .site-preview-toolbar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px;
+    background: #1a1d27; border-bottom: 1px solid var(--border);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.r { background: #ff5f56; }
+  .dot.y { background: #ffbd2e; }
+  .dot.g { background: #27c93f; }
+  .site-preview-url {
+    flex: 1; background: rgba(255,255,255,0.05);
+    border-radius: 6px; padding: 4px 12px;
+    font-size: 11px; color: var(--muted); font-family: monospace;
+  }
+  .preview-frame-wrap {
+    height: 480px; overflow: hidden; position: relative;
+  }
+  #siteFrame {
+    width: 100%; height: 100%;
+    border: none; background: #fff;
+  }
+  .btn-download-site {
+    display: block; width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-top: none;
+    color: var(--text); text-align: center;
+    padding: 12px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: background 0.15s;
+    font-family: var(--font-body);
+  }
+  .btn-download-site:hover { background: rgba(0,229,160,0.08); color: var(--accent); }
+
+  /* ── ERROR ── */
+  .error-box {
+    display: none;
+    max-width: 500px; margin: 40px auto;
+    background: rgba(255,70,70,0.08);
+    border: 1px solid rgba(255,70,70,0.25);
+    border-radius: 14px; padding: 20px 24px;
+    color: #ff8080; text-align: center; font-size: 14px;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted); font-size: 12px;
+    border-top: 1px solid var(--border);
+    margin-top: 60px;
+    position: relative; z-index: 1;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Trend<span>Base</span>AI</div>
+  <span class="badge">Beta</span>
+</header>
+
+<section class="hero">
+  <div class="hero-eyebrow">🔥 Google Trends × AI</div>
+  <h1>トレンドを、<br><span class="hl">ビジネスへ。</span></h1>
+  <p>キーワードを入れるだけ。<br>市場分析・事業計画・Webサイトを一瞬で生成します。</p>
+
+  <div class="search-wrap">
+    <input type="text" id="keyword" placeholder="例：パーソナルジム、AI副業、DIYキット..." autocomplete="off">
+    <button class="btn-analyze" id="btnAnalyze" onclick="analyze()">分析 → 生成</button>
+  </div>
+
+  <div class="examples">
+    <span style="font-size:12px;color:var(--muted);padding-top:6px;">例：</span>
+    <button onclick="fill('ミールキット')">ミールキット</button>
+    <button onclick="fill('プログラミングスクール')">プログラミングスクール</button>
+    <button onclick="fill('ペットフード')">ペットフード</button>
+    <button onclick="fill('ミニマリスト家具')">ミニマリスト家具</button>
+    <button onclick="fill('AIツール')">AIツール</button>
+  </div>
+</section>
+
+<!-- PROGRESS -->
+<div id="progress">
+  <ul class="step-list">
+    <li class="step-item" id="s1"><span class="step-icon">📡</span> Google Trends データ取得中...</li>
+    <li class="step-item" id="s2"><span class="step-icon">🧠</span> AIがトレンドを分析中...</li>
+    <li class="step-item" id="s3"><span class="step-icon">📋</span> ビジネスプラン作成中...</li>
+    <li class="step-item" id="s4"><span class="step-icon">🌐</span> Webサイト生成中...</li>
+  </ul>
+</div>
+
+<!-- ERROR -->
+<div class="error-box" id="errorBox"></div>
+
+<!-- RESULTS -->
+<div id="results">
+
+  <!-- Trend Card -->
+  <div class="trend-card" id="trendCard">
+    <div class="trend-header">
+      <div>
+        <div class="trend-keyword" id="resKeyword"></div>
+        <div style="color:var(--muted);font-size:13px;margin-top:4px;">Googleトレンド分析（日本・過去12ヶ月）</div>
+      </div>
+      <div class="trend-badge" id="resTrend"></div>
+    </div>
+    <div class="trend-stats">
+      <div class="stat-box">
+        <div class="stat-val" id="statScore">—</div>
+        <div class="stat-lbl">現在スコア</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="statAvg">—</div>
+        <div class="stat-lbl">年間平均</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="statRecent">—</div>
+        <div class="stat-lbl">直近4週平均</div>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="trendChart"></canvas>
+    </div>
+    <div id="tagSection"></div>
+  </div>
+
+  <!-- Plan + Site -->
+  <div class="output-grid">
+    <!-- Business Plan -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-icon">📋</span>
+        <span class="card-title">AIビジネスプラン</span>
+      </div>
+      <div class="card-body" id="planBody">
+        <div style="color:var(--muted);font-size:13px;">生成中...</div>
+      </div>
+    </div>
+
+    <!-- Site Preview -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-icon">🌐</span>
+        <span class="card-title">生成Webサイト プレビュー</span>
+      </div>
+      <div class="site-preview-wrap">
+        <div class="site-preview-toolbar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <div class="site-preview-url" id="siteUrl">生成中...</div>
+        </div>
+        <div class="preview-frame-wrap">
+          <iframe id="siteFrame" sandbox="allow-scripts allow-same-origin"></iframe>
+        </div>
+        <button class="btn-download-site" id="btnDownload" onclick="downloadSite()" style="display:none">
+          ⬇️ HTMLをダウンロード
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  TrendBaseAI — Google Trends × Claude AI &nbsp;|&nbsp; SerpApi powered &nbsp;|&nbsp; © 2025
+</footer>
+
+<script>
+let trendChart = null;
+let generatedHTML = "";
+
+function fill(kw) {
+  document.getElementById("keyword").value = kw;
+  document.getElementById("keyword").focus();
+}
+
+document.getElementById("keyword").addEventListener("keydown", e => {
+  if (e.key === "Enter") analyze();
+});
+
+function setStep(n) {
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById("s" + i);
+    if (i < n) { el.className = "step-item done"; el.innerHTML = el.innerHTML.replace("🔄","✅"); }
+    else if (i === n) {
+      el.className = "step-item active";
+      // add spinner
+      if (!el.querySelector(".spinner")) {
+        const sp = document.createElement("div");
+        sp.className = "spinner";
+        el.prepend(sp);
+      }
+    } else {
+      el.className = "step-item";
+    }
+  }
+}
+
+async function analyze() {
+  const kw = document.getElementById("keyword").value.trim();
+  if (!kw) { alert("キーワードを入力してください"); return; }
+
+  // Reset UI
+  document.getElementById("btnAnalyze").disabled = true;
+  document.getElementById("progress").style.display = "block";
+  document.getElementById("results").style.display = "none";
+  document.getElementById("errorBox").style.display = "none";
+  document.getElementById("planBody").innerHTML = '<div style="color:var(--muted);font-size:13px;">生成中...</div>';
+  document.getElementById("siteUrl").textContent = "生成中...";
+  document.getElementById("btnDownload").style.display = "none";
+  document.getElementById("siteFrame").srcdoc = "";
+  generatedHTML = "";
+  setStep(1);
+
+  try {
+    // Animate through steps while waiting
+    setTimeout(() => setStep(2), 2000);
+    setTimeout(() => setStep(3), 5000);
+
+    const response = await fetch(`/api/analyze?keyword=${encodeURIComponent(kw)}`);
+    const data = await response.json();
+
+    if (!response.ok || data.error) {
+      showError(data.error || "サーバーエラーが発生しました。");
+      return;
+    }
+
+    setStep(4);
+    renderTrend(data.trend);
+    setTimeout(() => {
+      document.getElementById("progress").style.display = "none";
+      renderResults(data.result, kw);
+      document.getElementById("btnAnalyze").disabled = false;
+    }, 400);
+
+  } catch(err) {
+    showError(err.message || "ネットワークエラーが発生しました。再試行してください。");
+  }
+}
+
+function showError(msg) {
+  document.getElementById("progress").style.display = "none";
+  document.getElementById("btnAnalyze").disabled = false;
+  const box = document.getElementById("errorBox");
+  box.textContent = "⚠️ " + msg;
+  box.style.display = "block";
+}
+
+function renderTrend(data) {
+  document.getElementById("results").style.display = "block";
+  document.getElementById("resKeyword").textContent = data.keyword;
+  document.getElementById("resTrend").textContent = data.trend;
+  document.getElementById("statScore").textContent = data.score;
+  document.getElementById("statAvg").textContent = data.avg;
+  document.getElementById("statRecent").textContent = data.recentAvg;
+
+  // Chart
+  const labels = data.values.map(d => d.date.slice(0,6));
+  const vals   = data.values.map(d => d.value);
+
+  if (trendChart) trendChart.destroy();
+  const ctx = document.getElementById("trendChart").getContext("2d");
+  trendChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        data: vals,
+        fill: true,
+        tension: 0.4,
+        borderColor: "#00e5a0",
+        borderWidth: 2,
+        backgroundColor: "rgba(0,229,160,0.08)",
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: "#00e5a0",
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: {
+        backgroundColor: "#181c28", borderColor: "#00e5a0", borderWidth: 1,
+        titleFont: { family: "'Noto Sans JP'" }, bodyFont: { family: "'Noto Sans JP'" },
+      }},
+      scales: {
+        x: { ticks: { color: "#6b7280", font: { size: 9 }, maxTicksLimit: 6 }, grid: { color: "rgba(255,255,255,0.04)" } },
+        y: { ticks: { color: "#6b7280", font: { size: 10 } }, grid: { color: "rgba(255,255,255,0.04)" }, min: 0, max: 100 },
+      }
+    }
+  });
+
+  // Tags
+  let tagHTML = "";
+  if (data.rising.length) {
+    tagHTML += `<div class="tag-group"><div class="tag-group-label">🔥 急上昇ワード</div><div class="tags">${data.rising.map(t=>`<span class="tag rising">${t}</span>`).join("")}</div></div>`;
+  }
+  if (data.top.length) {
+    tagHTML += `<div class="tag-group" style="margin-top:12px"><div class="tag-group-label">🔍 人気関連ワード</div><div class="tags">${data.top.map(t=>`<span class="tag top">${t}</span>`).join("")}</div></div>`;
+  }
+  document.getElementById("tagSection").innerHTML = tagHTML;
+}
+
+function renderResults(result, kw) {
+  const bp = result.businessPlan;
+  if (bp) {
+    const planHTML = `
+      <div class="plan-title">${bp.title || ""}</div>
+      <div class="plan-tagline">"${bp.tagline || ""}"</div>
+      ${section("🎯 チャンスの理由", bp.opportunity)}
+      ${section("👥 ターゲット", bp.target)}
+      ${section("💡 サービス概要", bp.service)}
+      ${listSection("⚡ 差別化ポイント", bp.differentiation)}
+      ${section("💰 収益モデル", bp.revenueModel)}
+      ${listSection("🚀 アクションプラン", bp.actionPlan)}
+      ${seoSection("🔍 SEOキーワード", bp.seoKeywords)}
+      ${section("⚠️ リスクと対策", bp.risk)}
+    `;
+    document.getElementById("planBody").innerHTML = planHTML;
+  }
+
+  if (result.websiteHTML) {
+    generatedHTML = result.websiteHTML;
+    document.getElementById("siteFrame").srcdoc = generatedHTML;
+    document.getElementById("siteUrl").textContent = `${kw.toLowerCase().replace(/\s+/,"-")}.jp`;
+    document.getElementById("btnDownload").style.display = "block";
+  }
+}
+
+function section(label, text) {
+  if (!text) return "";
+  return `<div class="plan-section"><div class="plan-section-label">${label}</div><p>${text}</p></div>`;
+}
+function listSection(label, items) {
+  if (!items || !items.length) return "";
+  return `<div class="plan-section"><div class="plan-section-label">${label}</div><ul>${items.map(i=>`<li>${i}</li>`).join("")}</ul></div>`;
+}
+function seoSection(label, kws) {
+  if (!kws || !kws.length) return "";
+  return `<div class="plan-section"><div class="plan-section-label">${label}</div><div class="seo-tags">${kws.map(k=>`<span class="seo-tag">${k}</span>`).join("")}</div></div>`;
+}
+
+function downloadSite() {
+  if (!generatedHTML) return;
+  const blob = new Blob([generatedHTML], { type: "text/html" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href = url; a.download = "trendbaseai-site.html";
+  a.click(); URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
