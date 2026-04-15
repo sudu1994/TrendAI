@@ -1,7 +1,7 @@
 const axios = require("axios");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-// Initialize Gemini (Free Tier)
+// 1. Initialize with the key from Vercel Environment Variables
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENAI_API_KEY);
 
 async function fetchTrendData(keyword) {
@@ -48,54 +48,53 @@ async function fetchTrendData(keyword) {
 async function generatePlanAndSite(trendData) {
   const { keyword, trend, score, avg, recentAvg, rising, top } = trendData;
 
-  // Use Gemini 1.5 Flash - Fast and Free
+  // 2. Using Gemini 3 Flash (Current stable free-tier model in 2026)
   const model = genAI.getGenerativeModel({ 
-    model: "gemini-1.5-flash",
-    generationConfig: { responseMimeType: "application/json" } 
+    model: "gemini-3-flash-preview",
+    generationConfig: { 
+      responseMimeType: "application/json",
+      temperature: 0.7 
+    }
   });
 
-  const systemPrompt = `あなたはTrendBaseAIのAIアナリストです。
-Googleトレンドデータを元に、起業家・副業志望者向けの実用的なビジネスプランと
-完全なHTMLウェブサイトを日本語で生成します。
-必ずJSON形式のみで返答してください。余分なテキストは一切不要です。`;
+  const systemPrompt = `あなたはTrendBaseAIのアナリストです。
+Googleトレンドデータを元に、ビジネスプランとTailwind CSSを使用したHTMLウェブサイトを日本語で生成します。
+必ず純粋なJSON形式のみで返答してください。`;
 
   const userPrompt = `
-# Googleトレンドデータ
 キーワード: "${keyword}"
-トレンド方向: ${trend}
-現在スコア: ${score}/100（過去12ヶ月平均: ${avg}）
-直近4週平均: ${recentAvg}
-急上昇関連ワード: ${rising.join(", ") || "なし"}
-人気関連ワード: ${top.join(", ") || "なし"}
+トレンド: ${trend}
+スコア: ${score}
+関連ワード: ${rising.join(", ")}
 
-# タスク
 以下のJSONを生成してください：
 {
   "businessPlan": {
-    "title": "ビジネス名（キャッチーで覚えやすい）",
-    "tagline": "15文字以内のキャッチコピー",
-    "opportunity": "なぜ今このビジネスがチャンスなのか（3文）",
-    "target": "ターゲット顧客像（具体的に2文）",
-    "service": "提供するサービス・商品の概要（3文）",
-    "differentiation": "競合との差別化ポイント（3箇条）",
-    "seoKeywords": ["SEOキーワード×8個"],
-    "revenueModel": "収益モデルの説明（2文）",
-    "actionPlan": ["今すぐできるアクション×5ステップ"],
-    "risk": "主なリスクと対策（2文）"
+    "title": "ビジネス名",
+    "tagline": "キャッチコピー",
+    "opportunity": "理由",
+    "target": "顧客像",
+    "service": "概要",
+    "differentiation": ["ポイント1", "2", "3"],
+    "seoKeywords": ["word1", "word2"],
+    "revenueModel": "収益モデル",
+    "actionPlan": ["Step1", "Step2"],
+    "risk": "対策"
   },
-  "websiteHTML": "完全なHTML文書（<!DOCTYPE html>から</html>まで）。Tailwind CDNを使い、モダンでプロフェッショナルなデザイン。"
+  "websiteHTML": "<!DOCTYPE html>...</html>"
 }`;
 
   const result = await model.generateContent(systemPrompt + "\n\n" + userPrompt);
   const response = await result.response;
   const fullText = response.text();
   
-  // Clean potentially backticked JSON
+  // 3. Robust JSON cleaning to prevent "Unexpected token" errors
   const cleaned = fullText.replace(/^```json\s*/m, "").replace(/```\s*$/m, "").trim();
   return JSON.parse(cleaned);
 }
 
 module.exports = async (req, res) => {
+  // CORS setup
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -110,7 +109,7 @@ module.exports = async (req, res) => {
     const aiResult  = await generatePlanAndSite(trendData);
     return res.status(200).json({ trend: trendData, result: aiResult });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: err.message || "サーバーエラーが発生しました。" });
+    console.error("Server Error:", err);
+    return res.status(500).json({ error: err.message || "内部サーバーエラー" });
   }
 };
